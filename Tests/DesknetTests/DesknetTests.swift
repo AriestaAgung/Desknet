@@ -40,3 +40,76 @@ import Testing
     #expect(text.contains("cURL"))
     #expect(text.contains("curl -X 'POST'"))
 }
+
+@MainActor
+@Test func swiftUIViewModelFiltersAndKeepsSelection() {
+    let store = DesknetStore()
+    let refreshID = captureRequest(
+        store: store,
+        url: "https://localhost:3000/api/apps/auth/refresh",
+        method: "POST",
+        statusCode: 200,
+        responseBody: #"{"message":"ok"}"#
+    )
+    _ = captureRequest(
+        store: store,
+        url: "https://localhost:3000/api/apps/subscription/validate",
+        method: "POST",
+        statusCode: 401,
+        responseBody: #"{"error":"invalid token"}"#
+    )
+
+    let viewModel = DesknetMonitorViewModel(store: store)
+    viewModel.selectedEntryID = refreshID
+
+    viewModel.query = "refresh"
+
+    #expect(viewModel.entries.count == 1)
+    #expect(viewModel.entries.first?.id == refreshID)
+    #expect(viewModel.selectedEntryID == refreshID)
+}
+
+@MainActor
+@Test func swiftUIViewModelAutoSelectsFirstEntryAndSupportsSections() {
+    let store = DesknetStore()
+    _ = captureRequest(
+        store: store,
+        url: "https://localhost:3000/api/apps/subscription/validate",
+        method: "POST",
+        statusCode: 200,
+        responseBody: #"{"ok":true}"#
+    )
+
+    let viewModel = DesknetMonitorViewModel(store: store)
+    #expect(viewModel.selectedEntry != nil)
+    #expect(viewModel.requestCountText == "1 requests")
+
+    #expect(viewModel.isSectionExpanded(.requestHeaders) == false)
+    viewModel.setSectionExpanded(.requestHeaders, isExpanded: true)
+    #expect(viewModel.isSectionExpanded(.requestHeaders) == true)
+}
+
+private func captureRequest(
+    store: DesknetStore,
+    url: String,
+    method: String,
+    statusCode: Int,
+    responseBody: String
+) -> UUID {
+    var request = URLRequest(url: URL(string: url)!)
+    request.httpMethod = method
+    request.allHTTPHeaderFields = ["Content-Type": "application/json"]
+    request.httpBody = Data("{}".utf8)
+
+    let id = store.begin(request: request)!
+    let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: statusCode,
+        httpVersion: nil,
+        headerFields: ["Content-Type": "application/json"]
+    )!
+    store.recordResponse(for: id, response: response)
+    store.appendResponseBody(for: id, data: Data(responseBody.utf8))
+    store.finish(for: id, error: nil)
+    return id
+}

@@ -9,6 +9,7 @@ Lightweight network debugging for macOS apps inspired by Netfox.
 - Default shortcut `⌘⌃Z` (same as iOS simulator shake gesture).
 - Netfox-style lifecycle: `start()`, `stop()`, `show()`, `hide()`.
 - URL ignore patterns for noisy hosts.
+- Search requests by URL/path/method/status/error text.
 
 ## Quick Start
 
