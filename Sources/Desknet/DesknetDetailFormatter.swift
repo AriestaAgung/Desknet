@@ -68,6 +68,17 @@ enum DesknetDetailFormatter {
         return lines.joined(separator: "\n")
     }
 
+    static func summaryTitle(for entry: NetworkLogEntry) -> String {
+        let status = entry.statusCode.map(String.init) ?? "-"
+        let duration: String
+        if let value = entry.duration {
+            duration = String(format: "%.2fs", value)
+        } else {
+            duration = "running"
+        }
+        return "[\(entry.method)] [\(status)] [\(duration)] \(entry.url.absoluteString)"
+    }
+
     private static func headerLines(_ headers: [String: String]) -> [String] {
         if headers.isEmpty {
             return ["-"]

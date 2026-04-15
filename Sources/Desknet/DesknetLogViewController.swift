@@ -35,6 +35,9 @@ final class DesknetLogViewController: NSViewController {
     private let detailScrollView = NSScrollView()
     private let splitView = NSSplitView()
     private let requestCountLabel = NSTextField(labelWithString: "0 requests")
+    private let rowCellIdentifier = NSUserInterfaceItemIdentifier("desknet.request.cell")
+    private let rowIconTag = 1001
+    private let rowTextTag = 1002
 
     init(store: DesknetStore) {
         self.store = store
@@ -208,7 +211,27 @@ final class DesknetLogViewController: NSViewController {
         }
         let entry = entries[row]
         selectedEntryID = entry.id
-        detailView.string = DesknetDetailFormatter.format(entry: entry)
+
+        let title = DesknetDetailFormatter.summaryTitle(for: entry)
+        let body = DesknetDetailFormatter.format(entry: entry)
+        let attributed = NSMutableAttributedString(
+            string: "\(title)\n\n",
+            attributes: [
+                .font: NSFont.boldSystemFont(ofSize: 13),
+                .foregroundColor: NSColor.labelColor,
+            ]
+        )
+        attributed.append(
+            NSAttributedString(
+                string: body,
+                attributes: [
+                    .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+                    .foregroundColor: NSColor.labelColor,
+                ]
+            )
+        )
+        detailView.textStorage?.setAttributedString(attributed)
+
         detailView.scrollRangeToVisible(NSRange(location: 0, length: 0))
         detailView.needsDisplay = true
         DesknetDiagnostics.log(
@@ -247,40 +270,61 @@ extension DesknetLogViewController: NSTableViewDataSource, NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard entries.indices.contains(row) else { return nil }
         let entry = entries[row]
-        let identifier = NSUserInterfaceItemIdentifier("desknet.request.cell")
-
-        let text = cellText(for: entry)
-        if let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView,
-           let textField = cell.textField {
-            textField.stringValue = text
+        let endpointText = endpointTitle(for: entry)
+        if let cell = tableView.makeView(withIdentifier: rowCellIdentifier, owner: self) as? NSTableCellView {
+            if let iconView = cell.viewWithTag(rowIconTag) as? NSImageView {
+                configure(iconView: iconView, for: entry)
+            }
+            if let textField = cell.viewWithTag(rowTextTag) as? NSTextField {
+                textField.stringValue = endpointText
+            }
             return cell
         }
 
         let cell = NSTableCellView()
-        cell.identifier = identifier
+        cell.identifier = rowCellIdentifier
 
-        let textField = NSTextField(labelWithString: text)
+        let iconView = NSImageView()
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.tag = rowIconTag
+        iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+
+        let textField = NSTextField(labelWithString: endpointText)
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.lineBreakMode = .byTruncatingTail
+        textField.tag = rowTextTag
         cell.textField = textField
+        cell.addSubview(iconView)
         cell.addSubview(textField)
+        configure(iconView: iconView, for: entry)
 
         NSLayoutConstraint.activate([
-            textField.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 10),
+            iconView.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 10),
+            iconView.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 14),
+            iconView.heightAnchor.constraint(equalToConstant: 14),
+            textField.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
             textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
             textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
         ])
         return cell
     }
 
-    private func cellText(for entry: NetworkLogEntry) -> String {
-        let status = entry.statusCode.map(String.init) ?? "-"
-        let duration: String
-        if let value = entry.duration {
-            duration = String(format: "%.2fs", value)
-        } else {
-            duration = "running"
+    private func endpointTitle(for entry: NetworkLogEntry) -> String {
+        let path = entry.url.path
+        if path.isEmpty || path == "/" {
+            return entry.url.host ?? entry.url.absoluteString
         }
-        return "[\(entry.method)] [\(status)] [\(duration)] \(entry.url.absoluteString)"
+        return path
+    }
+
+    private func configure(iconView: NSImageView, for entry: NetworkLogEntry) {
+        if entry.errorDescription != nil || (entry.statusCode ?? 0) >= 400 {
+            iconView.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Error")
+            iconView.contentTintColor = .systemRed
+        } else {
+            iconView.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "Success")
+            iconView.contentTintColor = .systemGreen
+        }
     }
 }
