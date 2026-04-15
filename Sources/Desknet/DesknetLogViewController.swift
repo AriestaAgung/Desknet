@@ -201,8 +201,11 @@ final class DesknetMonitorViewModel: ObservableObject {
             ("Duration", durationText(for: entry)),
             ("Request Size", byteFormatter.string(fromByteCount: Int64(entry.requestBody.count))),
             ("Response Size", byteFormatter.string(fromByteCount: Int64(entry.responseBody.count))),
-            ("Timestamp", timestampFormatter.string(from: entry.startedAt)),
         ]
+    }
+
+    func timestampText(for entry: NetworkLogEntry) -> String {
+        timestampFormatter.string(from: entry.startedAt)
     }
 
     func headers(for section: DetailSection, entry: NetworkLogEntry) -> [String: String] {
@@ -304,21 +307,21 @@ struct DesknetMonitorRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(DesknetPalette.windowBackground)
     }
 
     private var headerView: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: "point.3.connected.trianglepath.dotted")
                 .font(.system(size: 18, weight: .regular))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Network Monitor")
+                Text("Desknet")
                     .font(.system(size: 17, weight: .bold))
-                Text("API Request & Response Logger")
+                Text("Network Logger")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondary)
             }
 
             Spacer(minLength: 16)
@@ -327,7 +330,7 @@ struct DesknetMonitorRootView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(DesknetPalette.controlBackground)
                 .clipShape(Capsule())
 
             Button("Clear") {
@@ -344,13 +347,13 @@ struct DesknetMonitorRootView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondary)
                 TextField("Search requests...", text: $viewModel.query)
                     .textFieldStyle(.plain)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(DesknetPalette.controlBackground)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .padding(.horizontal, 14)
             .padding(.top, 14)
@@ -375,7 +378,7 @@ struct DesknetMonitorRootView: View {
                 .padding(.bottom, 8)
             }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(DesknetPalette.windowBackground)
     }
 
     @ViewBuilder
@@ -399,7 +402,7 @@ struct DesknetMonitorRootView: View {
         } else {
             Text(viewModel.emptyStateText)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding(24)
         }
@@ -427,7 +430,7 @@ private struct DesknetRequestRowView: View {
 
                 Text(entry.statusCode.map(String.init) ?? "-")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(viewModel.isError(entry) ? Color.red : Color.green)
+                    .foregroundColor(viewModel.isError(entry) ? Color.red : Color.green)
             }
 
             Text(viewModel.endpointTitle(for: entry))
@@ -436,7 +439,7 @@ private struct DesknetRequestRowView: View {
 
             Text("◷ \(viewModel.durationText(for: entry))   \(viewModel.sizeText(for: entry))")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
                 .lineLimit(1)
         }
         .padding(.vertical, 10)
@@ -446,15 +449,15 @@ private struct DesknetRequestRowView: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(
                     isSelected
-                    ? Color(nsColor: .controlBackgroundColor).opacity(0.96)
-                    : Color(nsColor: .controlBackgroundColor).opacity(0.68)
+                    ? DesknetPalette.controlBackground.opacity(0.96)
+                    : DesknetPalette.controlBackground.opacity(0.68)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(
                     isSelected
-                    ? Color(nsColor: .tertiaryLabelColor).opacity(0.55)
+                    ? DesknetPalette.selectionBorder.opacity(0.55)
                     : Color.clear,
                     lineWidth: 1
                 )
@@ -492,27 +495,39 @@ private struct DesknetSummaryCard: View {
                 makeURLLine(title: "Endpoint", value: viewModel.endpointDetailText(for: entry))
             }
 
-            let columns = [GridItem(.adaptive(minimum: 170), spacing: 14)]
+            let columns = [GridItem(.adaptive(minimum: 180), spacing: 14)]
             LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 ForEach(viewModel.metricRows(for: entry), id: \.0) { metric in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(metric.0)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondary)
                         Text(metric.1)
                             .font(.system(size: 16, weight: .bold))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Timestamp")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Text(viewModel.timestampText(for: entry))
+                    .font(.system(size: 16, weight: .bold))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(DesknetPalette.windowBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                .stroke(DesknetPalette.separator, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -521,12 +536,12 @@ private struct DesknetSummaryCard: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondary)
             Text(value)
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
+                .desknetTextSelectionEnabled()
         }
     }
 }
@@ -547,7 +562,7 @@ private struct DesknetSectionCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondary)
                     Text(section.title)
                         .font(.system(size: 14, weight: .semibold))
                     Spacer(minLength: 0)
@@ -567,10 +582,10 @@ private struct DesknetSectionCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(DesknetPalette.windowBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                .stroke(DesknetPalette.separator, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -583,7 +598,7 @@ private struct DesknetSectionCard: View {
             if headers.isEmpty {
                 Text("No headers")
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(headers.sorted(by: { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }), id: \.key) { item in
@@ -591,7 +606,7 @@ private struct DesknetSectionCard: View {
                             HStack(alignment: .top) {
                                 Text(item.key)
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondary)
                                 Spacer()
                                 Button {
                                     viewModel.copyToPasteboard(item.value)
@@ -599,11 +614,11 @@ private struct DesknetSectionCard: View {
                                     Image(systemName: "doc.on.doc")
                                 }
                                 .buttonStyle(.plain)
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.secondary)
                             }
                             Text(item.value)
                                 .font(.system(size: 12, weight: .regular, design: .monospaced))
-                                .textSelection(.enabled)
+                                .desknetTextSelectionEnabled()
                                 .lineLimit(3)
                         }
                         .padding(10)
@@ -628,11 +643,11 @@ private struct DesknetSectionCard: View {
                         Image(systemName: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondary)
                 }
                 Text(text)
                     .font(.system(size: 12, weight: .regular, design: .monospaced))
-                    .textSelection(.enabled)
+                    .desknetTextSelectionEnabled()
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(10)
@@ -650,7 +665,7 @@ private struct DesknetSectionCard: View {
         case .requestHeaders:
             return Color.green.opacity(0.10)
         case .requestBody:
-            return Color.mint.opacity(0.10)
+            return DesknetPalette.teal.opacity(0.10)
         case .responseHeaders:
             return Color.blue.opacity(0.10)
         case .responseBody:
@@ -663,7 +678,7 @@ private struct DesknetSectionCard: View {
         case .requestHeaders:
             return Color.green.opacity(0.22)
         case .requestBody:
-            return Color.mint.opacity(0.22)
+            return DesknetPalette.teal.opacity(0.22)
         case .responseHeaders:
             return Color.blue.opacity(0.22)
         case .responseBody:
@@ -687,7 +702,7 @@ private struct DesknetPill: View {
     var body: some View {
         Text(text)
             .font(currentFont)
-            .foregroundStyle(textColor)
+            .foregroundColor(textColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(fillColor)
@@ -698,5 +713,24 @@ private struct DesknetPill: View {
         var copy = self
         copy.currentFont = font
         return copy
+    }
+}
+
+private enum DesknetPalette {
+    static let windowBackground = Color(red: 0.12, green: 0.12, blue: 0.13)
+    static let controlBackground = Color.white.opacity(0.08)
+    static let separator = Color.white.opacity(0.14)
+    static let selectionBorder = Color.white.opacity(0.40)
+    static let teal = Color(red: 0.23, green: 0.70, blue: 0.64)
+}
+
+private extension View {
+    @ViewBuilder
+    func desknetTextSelectionEnabled() -> some View {
+        if #available(macOS 12.0, *) {
+            textSelection(.enabled)
+        } else {
+            self
+        }
     }
 }
