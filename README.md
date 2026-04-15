@@ -2,6 +2,9 @@
 
 Desknet is a lightweight network inspector for macOS desktop development. It is inspired by Netfox, but built for Mac apps: start it from your app, capture HTTP/HTTPS traffic, and open an independent SwiftUI network log window with the same `Command-Control-Z` shortcut used for the iOS Simulator shake gesture.
 
+<img width="1092" height="732" alt="Screenshot 2026-04-15 at 21 49 30" src="https://github.com/user-attachments/assets/30141382-1e87-4317-9702-af280ea25a1c" />
+
+
 Desknet is intended for debug, local development, and QA builds. It should not be shipped in production builds unless you have made an intentional security and privacy review.
 
 ## Features
