@@ -16,10 +16,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "Desknet",
-            swiftSettings: [
-                .unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"])
-            ]
+            name: "Desknet"
         ),
         .testTarget(
             name: "DesknetTests",
